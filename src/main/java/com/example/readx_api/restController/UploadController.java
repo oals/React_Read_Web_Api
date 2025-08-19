@@ -1,7 +1,7 @@
 package com.example.readx_api.restController;
 
 import com.example.readx_api.service.OpenAiService;
-import com.example.readx_api.service.PdfService;
+import com.example.readx_api.service.DocumentService;
 import com.example.readx_api.service.RedisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -14,12 +14,13 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
 public class UploadController {
 
-    private final PdfService pdfService;
+    private final DocumentService documentService;
     private final OpenAiService openAiService;
     private final RedisService redisService;
 
@@ -32,7 +33,7 @@ public class UploadController {
                     .body("파일이 비어있습니다.");
         }
 
-        String documentText = pdfService.extractTextFromPdf(file);
+        String documentText = documentService.extractTextFromPdf(file);
 
         if (documentText == null || documentText.isEmpty()) {
             return ResponseEntity
@@ -40,9 +41,14 @@ public class UploadController {
                     .body("텍스트 추출 중 오류가 발생했습니다.");
         }
 
-        List<Double> embeddingData = openAiService.generateEmbeddings(documentText);
+        List<String> chunks = documentService.splitIntoChunks(documentText);
 
-        String documentRedisId = redisService.saveEmbeddingData(embeddingData);
+
+        List<List<Double>> embeddings = chunks.stream()
+                .map(openAiService::generateEmbeddings)
+                .collect(Collectors.toList());
+
+        String documentRedisId = redisService.saveEmbeddingData(chunks,embeddings);
 
         Map<String, String> responseBody = new HashMap<>();
         responseBody.put("documentId", documentRedisId);
