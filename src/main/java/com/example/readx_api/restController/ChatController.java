@@ -21,6 +21,8 @@ public class ChatController {
     @SuppressWarnings("unchecked")
     @PostMapping("/api/message/send")
     public ResponseEntity<?> sendMessage(@RequestBody Map<String, Object> payload) {
+
+        Map<String, String> responseBody = new HashMap<>();
         String message = (String) payload.get("message");
 
         List<Map<String, Object>> rawList = (List<Map<String, Object>>) payload.get("documentIdList");
@@ -29,22 +31,22 @@ public class ChatController {
                 .map(entry -> (String) entry.get("documentId"))
                 .collect(Collectors.toList());
 
-        List<Double> queryEmbedding = openAiService.generateEmbeddings(message);
-
-        Map<String, Object> findResult = vectorSearchService.findMostSimilar(documentIdList, queryEmbedding);
-
-        System.out.println("가장 유사한 문서: " + findResult);
-
         String resultText = "";
 
-        if (findResult == null ){
+        if (documentIdList.isEmpty()) {
             resultText = openAiService.generateChatReply(message, "참고할 문서 없음");
         } else {
-            System.out.println(findResult.get("topTexts").toString());
-            resultText = openAiService.generateChatReply(message,findResult.get("topTexts").toString());
+            List<Double> queryEmbedding = openAiService.generateEmbeddings(message);
+
+            Map<String, Object> findResult = vectorSearchService.findMostSimilar(documentIdList, queryEmbedding);
+
+            if (findResult == null ){
+                resultText = openAiService.generateChatReply(message, "참고할 문서 찾지 못함");
+            } else {
+                resultText = openAiService.generateChatReply(message,findResult.get("topTexts").toString());
+            }
         }
 
-        Map<String, String> responseBody = new HashMap<>();
         responseBody.put("result", resultText);
 
         return ResponseEntity.ok(responseBody);

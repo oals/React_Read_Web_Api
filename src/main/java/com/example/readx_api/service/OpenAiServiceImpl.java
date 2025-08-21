@@ -59,8 +59,12 @@ public class OpenAiServiceImpl implements OpenAiService {
     public String generateChatReply(String text, String documentChunkText) {
         // RAG 기반 프롬프트 구성
         String prompt = String.format("""
-        당신은 유능한 AI 어시스턴트입니다. 아래의 참고 문서를 바탕으로 사용자의 질문에 정확하고 간결하게 답변해주세요.
+        당신은 유능한 AI 어시스턴트입니다. 아래의 참고 문서를 바탕으로 사용자의 질문에 명확하게 답변하세요.
         
+        - 문단을 나눠 설명해야 할 때는 반드시 줄바꿈(개행)을 사용하세요.
+        - 각 항목(예: 근무지, 복지, 지원서류 등)은 새로운 줄에서 시작하세요.
+        - 필요 시 bullet point도 활용할 수 있습니다.
+
         [참고 문서]
         %s
         
